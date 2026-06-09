@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analog Comms Lab — Signal Modulation Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg:       #0b0e14;
+  --bg2:      #111620;
+  --bg3:      #181e2c;
+  --panel:    #0f1520;
+  --border:   #1e2a3a;
+  --border2:  #2a3a50;
+  --green:    #00e5a0;
+  --green2:   #00b37a;
+  --amber:    #f5a623;
+  --blue:     #4a9eff;
+  --red:      #ff5e6b;
+  --purple:   #a78bfa;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --dimmed:   #334155;
+  --mono:     'Space Mono', monospace;
+  --sans:     'Space Grotesk', sans-serif;
+  --glow:     0 0 20px rgba(0,229,160,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(11,14,20,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.nav-brand {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--green);
+  letter-spacing: 0.05em;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-brand .pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.nav-links {
+  display: flex; gap: 4px;
+  list-style: none;
+}
+.nav-links a {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--muted); text-decoration: none;
+  padding: 4px 10px; border-radius: 4px;
+  transition: .2s;
+}
+.nav-links a:hover { color: var(--green); background: rgba(0,229,160,.07); }
+
+/* ─── HERO ─── */
+.hero {
+  padding: 5rem 2rem 3rem;
+  text-align: center;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,229,160,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-eyebrow {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--green); letter-spacing: .12em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  font-weight: 600; line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--green);
+}
+.hero p {
+  max-width: 520px; margin: 0 auto 2rem;
+  color: var(--muted); font-size: 16px;
+}
+.badge-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin-bottom: 2.5rem;
+}
+.badge {
+  font-family: var(--mono); font-size: 10px;
+  padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  letter-spacing: .06em;
+}
+
+/* ─── MAIN LAYOUT ─── */
+.lab {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* ─── SCHEME SELECTOR ─── */
+.scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 6px;
+  margin-bottom: 2rem;
+}
+.scheme-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 6px 8px;
+  cursor: pointer;
+  transition: .18s;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: .04em;
+}
+.scheme-btn:hover { border-color: var(--border2); color: var(--text); background: var(--bg3); }
+.scheme-btn.active {
+  border-color: var(--green2);
+  color: var(--green);
+  background: rgba(0,229,160,.07);
+  box-shadow: inset 0 0 0 1px rgba(0,229,160,.15);
+}
+.scheme-btn .s-icon {
+  font-size: 18px; margin-bottom: 5px;
+  display: block;
+}
+
+/* ─── WORKBENCH ─── */
+.workbench {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .workbench { grid-template-columns: 1fr; }
+}
+
+/* ─── CONTROL PANEL ─── */
+.ctrl-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ctrl-header {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ctrl-header span {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--green); text-transform: uppercase; letter-spacing: .08em;
+}
+.dot-row { display: flex; gap: 5px; }
+.dot-row span {
+  width: 9px; height: 9px; border-radius: 50%;
+}
+.d-red { background: #ff5e6b44; border: 1px solid #ff5e6b88; }
+.d-amber { background: #f5a62344; border: 1px solid #f5a62388; }
+.d-green { background: var(--green2); }
+
+.ctrl-body { padding: 16px; }
+
+.section-label {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.ctrl-row {
+  margin-bottom: 14px;
+}
+.ctrl-row label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--muted);
+  margin-bottom: 6px;
+}
+.ctrl-row label .cv {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--green); min-width: 48px; text-align: right;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%; height: 4px;
+  background: var(--border2);
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 6px rgba(0,229,160,.4);
+  transition: .15s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(0,229,160,.6);
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--green); border: 2px solid var(--bg);
+  cursor: pointer;
+}
+
+select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--mono); font-size: 12px;
+  padding: 7px 10px;
+  outline: none; cursor: pointer;
+}
+select:focus { border-color: var(--green2); }
+
+.info-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green2);
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-top: 12px;
+}
+.info-box strong { color: var(--text); }
+
+.metric-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-top: 12px;
+}
+.metric {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.metric .m-label {
+  font-family: var(--mono); font-size: 9px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .07em;
+  margin-bottom: 2px;
+}
+.metric .m-val {
+  font-family: var(--mono); font-size: 15px;
+  color: var(--amber); font-weight: 700;
+}
+
+/* ─── OSCILLOSCOPE ─── */
+.scope-wrap {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.scope {
+  background: #060c10;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+.scope-bar {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.scope-bar .s-label {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+  display: flex; align-items: center; gap: 8px;
+}
+.scope-bar .s-label .color-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.scope-bar .s-info {
+  font-family: var(--mono); font-size: 10px; color: var(--dimmed);
+}
+canvas {
+  display: block; width: 100%;
+}
+
+.scope-legend {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  padding: 8px 14px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+}
+.leg-item {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+}
+.leg-line {
+  width: 24px; height: 2px; border-radius: 1px;
+}
+
+/* ─── SPECTRUM ─── */
+.spectrum-wrap {
+  background: #060c10;
+  border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.spectrum-wrap .scope-bar .s-label { color: var(--purple); }
+
+/* ─── FORMULA BAR ─── */
+.formula-bar {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--muted);
+  line-height: 2;
+}
+.formula-bar .f-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--dimmed); margin-bottom: 6px;
+}
+.formula-bar .eq { color: var(--text); }
+.formula-bar .hi { color: var(--amber); }
+.formula-bar .gr { color: var(--green); }
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  text-align: center;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--dimmed);
+}
+footer span { color: var(--muted); }
+
+/* ─── SCAN LINE EFFECT ─── */
+.scope::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+  );
+  pointer-events: none; border-radius: 10px;
+}
+
+/* ─── TABS (scheme sections) ─── */
+.panel-section { display: none; }
+.panel-section.active { display: block; }
+
+/* ─── ANIMATE IN ─── */
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(12px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.workbench { animation: fadeUp .35s ease both; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <span class="pulse"></span>
+    ANALOG COMMS LAB
+  </div>
+  <ul class="nav-links">
+    <li><a href="#lab">Simulator</a></li>
+    <li><a href="#spectrum">Spectrum</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <p class="hero-eyebrow">Signal Modulation Simulator</p>
+  <h1>Visualize <em>analog</em><br>communications in real time</h1>
+  <p>Tune carrier and message parameters to see AM, FM, PM, SSB, DSB-SC, VSB, WBFM, NBFM, pulse sampling, noisy channels, and RC time constants live on the scope.</p>
+  <div class="badge-row">
+    <span class="badge">AM</span><span class="badge">DSB-SC</span><span class="badge">SSB-SC</span>
+    <span class="badge">VSB</span><span class="badge">FM</span><span class="badge">PM</span>
+    <span class="badge">WBFM</span><span class="badge">NBFM</span><span class="badge">Pulse Sampling</span>
+    <span class="badge">Noisy Channel</span><span class="badge">Time Constant</span>
+  </div>
+</section>
+
+<!-- LAB -->
+<main class="lab" id="lab">
+
+  <!-- Scheme Picker -->
+  <div class="scheme-grid">
+    <button class="scheme-btn active" data-scheme="am">
+      <span class="s-icon">〰</span>AM
+    </button>
+    <button class="scheme-btn" data-scheme="dsbsc">
+      <span class="s-icon">⟺</span>DSB-SC
+    </button>
+    <button class="scheme-btn" data-scheme="ssbsc">
+      <span class="s-icon">⟶</span>SSB-SC
+    </button>
+    <button class="scheme-btn" data-scheme="vsb">
+      <span class="s-icon">◁▷</span>VSB
+    </button>
+    <button class="scheme-btn" data-scheme="fm">
+      <span class="s-icon">∿</span>FM
+    </button>
+    <button class="scheme-btn" data-scheme="pm">
+      <span class="s-icon">⌇</span>PM
+    </button>
+    <button class="scheme-btn" data-scheme="wbfm">
+      <span class="s-icon">≋</span>WBFM
+    </button>
+    <button class="scheme-btn" data-scheme="nbfm">
+      <span class="s-icon">≈</span>NBFM
+    </button>
+    <button class="scheme-btn" data-scheme="pulse">
+      <span class="s-icon">⊓⊓</span>Pulse
+    </button>
+    <button class="scheme-btn" data-scheme="noise">
+      <span class="s-icon">⊞</span>Noisy
+    </button>
+    <button class="scheme-btn" data-scheme="tc">
+      <span class="s-icon">⌁</span>τ RC
+    </button>
+  </div>
+
+  <!-- Workbench -->
+  <div class="workbench">
+
+    <!-- ─── CONTROL PANEL ─── -->
+    <aside class="ctrl-panel">
+      <div class="ctrl-header">
+        <div class="dot-row"><span class="d-red"></span><span class="d-amber"></span><span class="d-green"></span></div>
+        <span id="panel-title">AM MODULATOR</span>
+      </div>
+      <div class="ctrl-body">
+
+        <!-- MESSAGE SIGNAL -->
+        <div class="section-label">Message signal m(t)</div>
+        <div class="ctrl-row" id="row-fm">
+          <label>Message freq <span class="cv" id="lbl-fm">5 Hz</span></label>
+          <input type="range" id="sl-fm" min="1" max="30" step="1" value="5">
+        </div>
+        <div class="ctrl-row" id="row-am">
+          <label>Message amplitude <span class="cv" id="lbl-am">1.0</span></label>
+          <input type="range" id="sl-am" min="0.1" max="2" step="0.1" value="1.0">
+        </div>
+
+        <!-- CARRIER SIGNAL -->
+        <div class="section-label" id="carr-label">Carrier signal c(t)</div>
+        <div class="ctrl-row" id="row-fc">
+          <label>Carrier freq <span class="cv" id="lbl-fc">60 Hz</span></label>
+          <input type="range" id="sl-fc" min="20" max="200" step="5" value="60">
+        </div>
+        <div class="ctrl-row" id="row-ac">
+          <label>Carrier amplitude <span class="cv" id="lbl-ac">1.0</span></label>
+          <input type="range" id="sl-ac" min="0.5" max="2" step="0.1" value="1.0">
+        </div>
+
+        <!-- SCHEME-SPECIFIC -->
+        <div id="extra-controls"></div>
+
+        <!-- METRICS -->
+        <div class="metric-row" id="metrics"></div>
+
+        <!-- INFO -->
+        <div class="info-box" id="info-box"></div>
+
+        <!-- FORMULA -->
+        <div class="formula-bar" id="formula-bar" style="margin-top:12px"></div>
+
+      </div>
+    </aside>
+
+    <!-- ─── OSCILLOSCOPE SIDE ─── -->
+    <div class="scope-wrap">
+
+      <!-- Scope 1: Message -->
+      <div class="scope" id="scope-msg-wrap">
+        <div class="scope-bar">
+          <div class="s-label"><span class="color-dot" style="background:#4a9eff"></span>Ch 1 — Message signal</div>
+          <span class="s-info">m(t) = A·sin(2πf_m·t)</span>
+        </div>
+        <canvas id="c-msg" height="120"></canvas>
+        <div class="scope-legend">
+          <div class="leg-item"><span class="leg-line" style="background:#4a9eff"></span>m(t)</div>
+        </div>
+      </div>
+
+      <!-- Scope 2: Carrier (hidden for some schemes) -->
+      <div class="scope" id="scope-car-wrap">
+        <div class="scope-bar">
+          <div class="s-label"><span class="color-dot" style="background:#64748b"></span>Ch 2 — Carrier signal</div>
+          <span class="s-info">c(t) = A_c·cos(2πf_c·t)</span>
+        </div>
+        <canvas id="c-car" height="100"></canvas>
+        <div class="scope-legend">
+          <div class="leg-item"><span class="leg-line" style="background:#64748b"></span>c(t)</div>
+        </div>
+      </div>
+
+      <!-- Scope 3: Output -->
+      <div class="scope">
+        <div class="scope-bar">
+          <div class="s-label"><span class="color-dot" style="background:#00e5a0"></span>Ch 3 — Modulated output</div>
+          <span class="s-info" id="output-info">s(t)</span>
+        </div>
+        <canvas id="c-out" height="160"></canvas>
+        <div class="scope-legend" id="out-legend"></div>
+      </div>
+
+      <!-- Spectrum -->
+      <div class="spectrum-wrap" id="spectrum">
+        <div class="scope-bar">
+          <div class="s-label"><span class="color-dot" style="background:#a78bfa"></span>Frequency spectrum</div>
+          <span class="s-info">|S(f)|</span>
+        </div>
+        <canvas id="c-spec" height="130"></canvas>
+        <div class="scope-legend">
+          <div class="leg-item"><span class="leg-line" style="background:#a78bfa"></span>Magnitude spectrum</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Analog Communications Lab</span> — Real-time signal modulation simulator &nbsp;|&nbsp; Built with HTML5 Canvas
+</footer>
+
+<script>
+const PI2 = Math.PI * 2;
+let currentScheme = 'am';
+let rafId = null;
+
+// ─── Scheme config ───────────────────────────────────────────────
+const SCHEMES = {
+  am: {
+    title: 'AM MODULATOR',
+    outputInfo: 's(t) = [A_c + A_m·sin(2πf_m·t)]·cos(2πf_c·t)',
+    showCarrier: true,
+    showAc: true,
+    info: '<strong>Amplitude Modulation (AM)</strong> — The carrier amplitude varies with the message. Modulation index μ = A_m/A_c. Over-modulation occurs when μ > 1.',
+    formula: `<div class="f-title">AM equation</div>
+<div class="eq">s(t) = [<span class="hi">A_c</span> + <span class="gr">A_m</span>·sin(2π<span class="gr">f_m</span>·t)] · cos(2π<span class="hi">f_c</span>·t)</div>
+<div class="eq">μ = <span class="gr">A_m</span> / <span class="hi">A_c</span></div>`,
+    extraHTML: '',
+    metrics: (p) => [{label:'MOD INDEX μ', val: (p.am/p.ac).toFixed(2)},{label:'BW (Hz)', val: (2*p.fm).toFixed(0)}]
+  },
+  dsbsc: {
+    title: 'DSB-SC',
+    outputInfo: 's(t) = m(t) · cos(2πf_c·t)',
+    showCarrier: true,
+    showAc: false,
+    info: '<strong>DSB-SC</strong> — Carrier suppressed; both sidebands remain. Bandwidth = 2f_m. Phase reversal at message zero crossings visible on scope.',
+    formula: `<div class="f-title">DSB-SC equation</div>
+<div class="eq">s(t) = <span class="gr">m(t)</span> · cos(2π<span class="hi">f_c</span>·t)</div>
+<div class="eq">BW = 2 × <span class="gr">f_m</span></div>`,
+    extraHTML: '',
+    metrics: (p) => [{label:'BW (Hz)', val:(2*p.fm).toFixed(0)},{label:'η', val:'100%'}]
+  },
+  ssbsc: {
+    title: 'SSB-SC',
+    outputInfo: 's(t) = ½A_m·cos(2π(f_c±f_m)·t)',
+    showCarrier: false,
+    showAc: false,
+    info: '<strong>SSB-SC</strong> — One sideband removed via Hilbert transform. BW = f_m. Most bandwidth-efficient. USB shifts carrier up; LSB shifts down.',
+    formula: `<div class="f-title">SSB equation</div>
+<div class="eq">s(t) = <span class="gr">m(t)</span>·cos(2π<span class="hi">f_c</span>t) ∓ m̂(t)·sin(2π<span class="hi">f_c</span>t)</div>`,
+    extraHTML: `<div class="section-label">Sideband</div>
+<div class="ctrl-row"><select id="sl-ssb-side"><option value="usb">USB — Upper sideband</option><option value="lsb">LSB — Lower sideband</option></select></div>`,
+    metrics: (p) => [{label:'BW (Hz)', val:p.fm.toFixed(0)},{label:'SIDE', val:'SSB'}]
+  },
+  vsb: {
+    title: 'VSB',
+    outputInfo: 'Vestigial sideband (partial lower + full upper)',
+    showCarrier: false,
+    showAc: false,
+    info: '<strong>VSB</strong> — One full sideband + a vestige of the other. Vestige factor α: 0 = SSB, 1 = DSB. Used in analog TV broadcasting.',
+    formula: `<div class="f-title">VSB equation</div>
+<div class="eq">s(t) ≈ USB + α·LSB</div>
+<div class="eq">BW ≈ <span class="gr">f_m</span>(1 + <span class="hi">α</span>)</div>`,
+    extraHTML: `<div class="section-label">Vestige factor α</div>
+<div class="ctrl-row"><label>Vestige α <span class="cv" id="lbl-vf">0.30</span></label><input type="range" id="sl-vf" min="0" max="1" step="0.05" value="0.3"></div>`,
+    metrics: (p) => [{label:'BW (Hz)', val:(p.fm*(1+(p.vf||.3))).toFixed(1)},{label:'α', val:(p.vf||.3).toFixed(2)}]
+  },
+  fm: {
+    title: 'FM MODULATOR',
+    outputInfo: 's(t) = A_c·cos[2πf_c·t + (Δf/f_m)·sin(2πf_m·t)]',
+    showCarrier: false,
+    showAc: true,
+    info: '<strong>FM</strong> — Instantaneous frequency deviates by Δf·m(t)/A_m. Modulation index β = Δf/f_m. Higher β → more occupied spectrum.',
+    formula: `<div class="f-title">FM equation</div>
+<div class="eq">s(t) = <span class="hi">A_c</span>·cos[2π<span class="hi">f_c</span>t + β·sin(2π<span class="gr">f_m</span>t)]</div>
+<div class="eq">β = <span class="hi">Δf</span> / <span class="gr">f_m</span> &nbsp;(Carson BW ≈ 2(<span class="hi">Δf</span>+<span class="gr">f_m</span>))</div>`,
+    extraHTML: `<div class="section-label">Frequency deviation</div>
+<div class="ctrl-row"><label>Δf (Hz) <span class="cv" id="lbl-kf">15 Hz</span></label><input type="range" id="sl-kf" min="1" max="50" step="1" value="15"></div>`,
+    metrics: (p) => [{label:'β', val:((p.kf||15)/p.fm).toFixed(2)},{label:'Carson BW', val:(2*((p.kf||15)+p.fm)).toFixed(0)}]
+  },
+  pm: {
+    title: 'PM MODULATOR',
+    outputInfo: 's(t) = A_c·cos[2πf_c·t + k_p·m(t)]',
+    showCarrier: false,
+    showAc: true,
+    info: '<strong>PM</strong> — Phase proportional to message amplitude. Related to FM but phase (not frequency) is the controlled quantity. Basis of digital PSK.',
+    formula: `<div class="f-title">PM equation</div>
+<div class="eq">s(t) = <span class="hi">A_c</span>·cos[2π<span class="hi">f_c</span>t + <span class="hi">k_p</span>·m(t)]</div>
+<div class="eq">Δφ_max = <span class="hi">k_p</span> × <span class="gr">A_m</span></div>`,
+    extraHTML: `<div class="section-label">Phase deviation</div>
+<div class="ctrl-row"><label>k_p (rad) <span class="cv" id="lbl-kp">1.5 rad</span></label><input type="range" id="sl-kp" min="0.1" max="5" step="0.1" value="1.5"></div>`,
+    metrics: (p) => [{label:'MAX Δφ', val:((p.kp||1.5)*p.am).toFixed(2)+' rad'},{label:'β_p', val:((p.kp||1.5)*p.am).toFixed(2)}]
+  },
+  wbfm: {
+    title: 'WBFM',
+    outputInfo: 'Wide-Band FM — β ≥ 1',
+    showCarrier: false,
+    showAc: true,
+    info: '<strong>WBFM</strong> — β = Δf/f_m ≥ 1. Much wider bandwidth than NBFM but far superior noise immunity. Used in FM broadcasting (88–108 MHz).',
+    formula: `<div class="f-title">WBFM</div>
+<div class="eq">β = <span class="hi">Δf</span>/<span class="gr">f_m</span> ≥ 1</div>
+<div class="eq">BW ≈ 2(<span class="hi">Δf</span> + <span class="gr">f_m</span>) &nbsp;[Carson]</div>`,
+    extraHTML: `<div class="section-label">Wide deviation</div>
+<div class="ctrl-row"><label>Δf (Hz) <span class="cv" id="lbl-wdf">30 Hz</span></label><input type="range" id="sl-wdf" min="10" max="80" step="2" value="30"></div>`,
+    metrics: (p) => [{label:'β', val:((p.wdf||30)/p.fm).toFixed(1)},{label:'BW (Hz)', val:(2*((p.wdf||30)+p.fm)).toFixed(0)}]
+  },
+  nbfm: {
+    title: 'NBFM',
+    outputInfo: 'Narrow-Band FM — β ≪ 1',
+    showCarrier: false,
+    showAc: true,
+    info: '<strong>NBFM</strong> — β ≪ 1 (typically < 0.3). BW ≈ 2f_m — looks like AM. Used in two-way radios, walkie-talkies, emergency services.',
+    formula: `<div class="f-title">NBFM (β≪1 approx)</div>
+<div class="eq">s(t) ≈ cos(2π<span class="hi">f_c</span>t) − β·sin(2π<span class="gr">f_m</span>t)·sin(2π<span class="hi">f_c</span>t)</div>`,
+    extraHTML: `<div class="section-label">Narrow deviation</div>
+<div class="ctrl-row"><label>Δf (Hz) <span class="cv" id="lbl-ndf">1.0 Hz</span></label><input type="range" id="sl-ndf" min="0.2" max="3" step="0.2" value="1"></div>`,
+    metrics: (p) => [{label:'β', val:((p.ndf||1)/p.fm).toFixed(3)},{label:'BW (Hz)', val:(2*p.fm).toFixed(0)}]
+  },
+  pulse: {
+    title: 'PULSE SAMPLING (PAM)',
+    outputInfo: 'Natural pulse amplitude modulation',
+    showCarrier: false,
+    showAc: false,
+    info: '<strong>Pulse Sampling</strong> — Message sampled at f_s. Nyquist: f_s ≥ 2f_m. If f_s < 2f_m (aliasing), the reconstructed signal will be distorted.',
+    formula: `<div class="f-title">Nyquist theorem</div>
+<div class="eq">f_s ≥ 2 × <span class="gr">f_m</span> &nbsp;(no aliasing)</div>
+<div class="eq">Pulses at intervals T_s = 1/<span class="hi">f_s</span></div>`,
+    extraHTML: `<div class="section-label">Sampling</div>
+<div class="ctrl-row"><label>Sampling rate f_s <span class="cv" id="lbl-fs">40 Hz</span></label><input type="range" id="sl-fs" min="5" max="120" step="5" value="40"></div>
+<div class="ctrl-row"><label>Pulse width τ <span class="cv" id="lbl-pw">0.10</span></label><input type="range" id="sl-pw" min="0.02" max="0.45" step="0.02" value="0.1"></div>`,
+    metrics: (p) => [{label:'f_s/2f_m', val:((p.fs||40)/(2*p.fm)).toFixed(2)},{label:'STATUS', val:((p.fs||40)>=2*p.fm?'✓ OK':'✗ ALIAS')}]
+  },
+  noise: {
+    title: 'NOISY CHANNEL (AWGN)',
+    outputInfo: 'r(t) = s(t) + n(t)',
+    showCarrier: false,
+    showAc: false,
+    info: '<strong>AWGN Channel</strong> — Additive white Gaussian noise. SNR in dB: higher = cleaner. FM has ~6 dB noise advantage over AM due to limiter action.',
+    formula: `<div class="f-title">AWGN model</div>
+<div class="eq">r(t) = s(t) + n(t)</div>
+<div class="eq">SNR = 10·log₁₀(P_s / P_n)</div>`,
+    extraHTML: `<div class="section-label">Channel</div>
+<div class="ctrl-row"><label>SNR <span class="cv" id="lbl-snr">20 dB</span></label><input type="range" id="sl-snr" min="-10" max="40" step="1" value="20"></div>
+<div class="ctrl-row"><label>Modulation type</label><select id="sl-nmod"><option value="am">AM</option><option value="fm">FM</option><option value="dsb">DSB-SC</option></select></div>`,
+    metrics: (p) => [{label:'SNR', val:(p.snr||20)+' dB'},{label:'NOISE σ', val:(Math.pow(10,-(p.snr||20)/20)).toFixed(3)}]
+  },
+  tc: {
+    title: 'RC TIME CONSTANT',
+    outputInfo: 'V_C(t) — capacitor voltage vs time',
+    showCarrier: false,
+    showAc: false,
+    info: '<strong>Time Constant τ = RC</strong> — At t = τ: capacitor reaches 63.2% (charge) or 36.8% (discharge) of final value. Fully settled at ~5τ. Used as AM envelope detector.',
+    formula: `<div class="f-title">RC equations</div>
+<div class="eq">Charge: V(t) = V_s·(1 − e<sup>−t/<span class="hi">τ</span></sup>)</div>
+<div class="eq">Discharge: V(t) = V_s·e<sup>−t/<span class="hi">τ</span></sup></div>
+<div class="eq"><span class="hi">τ</span> = RC</div>`,
+    extraHTML: `<div class="section-label">RC circuit</div>
+<div class="ctrl-row"><label>R (kΩ) <span class="cv" id="lbl-R">10</span></label><input type="range" id="sl-R" min="1" max="100" step="1" value="10"></div>
+<div class="ctrl-row"><label>C (μF) <span class="cv" id="lbl-C">10</span></label><input type="range" id="sl-C" min="1" max="100" step="1" value="10"></div>
+<div class="ctrl-row"><label>V_s (V) <span class="cv" id="lbl-Vs">5.0 V</span></label><input type="range" id="sl-Vs" min="1" max="12" step="0.5" value="5"></div>
+<div class="ctrl-row"><label>Mode</label><select id="sl-tcmode"><option value="charge">Charging</option><option value="dis">Discharging</option></select></div>`,
+    metrics: (p) => {
+      const tau=(p.R||10)*(p.C||10);
+      return [{label:'τ (ms)', val:tau.toFixed(0)},{label:'5τ (ms)', val:(5*tau).toFixed(0)}];
+    }
+  }
+};
+
+// ─── Params read ─────────────────────────────────────────────────
+function getParams() {
+  const g = id => { const e=document.getElementById(id); return e?parseFloat(e.value):null; };
+  const gs = id => { const e=document.getElementById(id); return e?e.value:null; };
+  return {
+    fm: g('sl-fm')||5, am: g('sl-am')||1,
+    fc: g('sl-fc')||60, ac: g('sl-ac')||1,
+    kf: g('sl-kf'), kp: g('sl-kp'),
+    vf: g('sl-vf'), wdf: g('sl-wdf'), ndf: g('sl-ndf'),
+    fs: g('sl-fs'), pw: g('sl-pw'),
+    snr: g('sl-snr'), R: g('sl-R'), C: g('sl-C'), Vs: g('sl-Vs'),
+    ssbSide: gs('sl-ssb-side')||'usb',
+    nmod: gs('sl-nmod')||'am',
+    tcMode: gs('sl-tcmode')||'charge'
+  };
+}
+
+// ─── Canvas helpers ───────────────────────────────────────────────
+function resizeCanvas(c) {
+  const w = c.parentElement.offsetWidth || 640;
+  if (c.width !== w) { c.width = w; }
+  return { ctx: c.getContext('2d'), w: c.width, h: c.height };
+}
+
+function clearScope(ctx, w, h) {
+  ctx.fillStyle = '#060c10';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(0,229,160,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo(0, h*i/4); ctx.lineTo(w, h*i/4); ctx.stroke();
+  }
+  for (let i = 1; i < 8; i++) {
+    ctx.beginPath(); ctx.moveTo(w*i/8, 0); ctx.lineTo(w*i/8, h); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(0,229,160,0.09)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+}
+
+function plotLine(ctx, pts, color, w, h, lw, dashed) {
+  if (!pts || !pts.length) return;
+  const yC = h / 2;
+  const maxV = Math.max(...pts.map(Math.abs), 0.001);
+  const yS = h * 0.42 / maxV;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw || 1.5;
+  if (dashed) ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  pts.forEach((v, i) => {
+    const x = i / (pts.length - 1) * w;
+    const y = yC - v * yS;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function makeSig(N, fn) {
+  return Array.from({length: N}, (_, i) => fn(i / N));
+}
+
+// ─── Hilbert (FIR approx) ─────────────────────────────────────────
+function hilbert(sig) {
+  const n = sig.length, out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let k = Math.max(0,i-60); k < Math.min(n,i+60); k++) {
+      const d = i - k;
+      if (d !== 0 && d % 2 !== 0) s += sig[k] / (Math.PI * d);
+    }
+    out[i] = s;
+  }
+  return out;
+}
+
+// ─── Gaussian noise ────────────────────────────────────────────────
+function gaussNoise() {
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(PI2*v);
+}
+
+// ─── Spectrum (DFT magnitude) ─────────────────────────────────────
+function drawSpectrum(sig, fc) {
+  const {ctx,w,h} = resizeCanvas(document.getElementById('c-spec'));
+  clearScope(ctx, w, h);
+  const N = 512;
+  const s = sig.slice(0, N);
+  while (s.length < N) s.push(0);
+  const spec = new Float32Array(N/2);
+  for (let k = 0; k < N/2; k++) {
+    let re=0, im=0;
+    for (let n=0; n<N; n++) {
+      re += s[n]*Math.cos(PI2*k*n/N);
+      im -= s[n]*Math.sin(PI2*k*n/N);
+    }
+    spec[k] = Math.sqrt(re*re+im*im)/N;
+  }
+  const maxS = Math.max(...spec, 0.001);
+  ctx.strokeStyle = '#a78bfa';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  spec.forEach((v, i) => {
+    const x = i / (N/2-1) * w;
+    const y = h - (v/maxS)*(h*0.88);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // freq axis label
+  ctx.fillStyle='rgba(167,139,250,0.5)';
+  ctx.font='10px Space Mono, monospace';
+  ctx.fillText('0', 4, h-4);
+  ctx.fillText('f →', w-36, h-4);
+}
+
+// ─── Main draw ────────────────────────────────────────────────────
+function draw() {
+  const p = getParams();
+  const N = 800;
+  const sc = SCHEMES[currentScheme];
+
+  // Message
+  const msg = makeSig(N, t => p.am * Math.sin(PI2 * p.fm * t));
+
+  // Carrier
+  const car = makeSig(N, t => p.ac * Math.cos(PI2 * p.fc * t));
+
+  // Output
+  let out, env;
+
+  switch (currentScheme) {
+    case 'am': {
+      out = makeSig(N, t => (p.ac + p.am*Math.sin(PI2*p.fm*t))*Math.cos(PI2*p.fc*t));
+      env = makeSig(N, t => p.ac + p.am*Math.sin(PI2*p.fm*t));
+      break;
+    }
+    case 'dsbsc': {
+      out = makeSig(N, t => p.am*Math.sin(PI2*p.fm*t)*Math.cos(PI2*p.fc*t));
+      break;
+    }
+    case 'ssbsc': {
+      const m = msg.map(v=>v);
+      const mH = hilbert(m);
+      const s = p.ssbSide === 'usb' ? 1 : -1;
+      out = makeSig(N, (t,i)=>m[Math.round(t*(N-1))]||0);
+      out = Array.from({length:N}, (_,i) => {
+        const t = i/N;
+        return msg[i]*Math.cos(PI2*p.fc*t) - s*mH[i]*Math.sin(PI2*p.fc*t);
+      });
+      break;
+    }
+    case 'vsb': {
+      const m = msg;
+      const mH = hilbert(m);
+      const vf = p.vf || 0.3;
+      out = Array.from({length:N}, (_,i) => {
+        const t = i/N;
+        const usb = m[i]*Math.cos(PI2*p.fc*t) - mH[i]*Math.sin(PI2*p.fc*t);
+        const lsb = m[i]*Math.cos(PI2*p.fc*t) + mH[i]*Math.sin(PI2*p.fc*t);
+        return usb + vf * lsb;
+      });
+      break;
+    }
+    case 'fm': {
+      const df = p.kf || 15;
+      out = makeSig(N, t => {
+        const phase = PI2*p.fc*t + (df/p.fm)*p.am*(1 - Math.cos(PI2*p.fm*t));
+        return p.ac * Math.cos(phase);
+      });
+      break;
+    }
+    case 'pm': {
+      const kp = p.kp || 1.5;
+      out = makeSig(N, t => p.ac * Math.cos(PI2*p.fc*t + kp*p.am*Math.sin(PI2*p.fm*t)));
+      break;
+    }
+    case 'wbfm': {
+      const df = p.wdf || 30;
+      out = makeSig(N, t => {
+        const phase = PI2*p.fc*t + (df/p.fm)*(1 - Math.cos(PI2*p.fm*t));
+        return p.ac * Math.cos(phase);
+      });
+      break;
+    }
+    case 'nbfm': {
+      const df = p.ndf || 1;
+      out = makeSig(N, t => {
+        const phase = PI2*p.fc*t + (df/p.fm)*(1 - Math.cos(PI2*p.fm*t));
+        return p.ac * Math.cos(phase);
+      });
+      break;
+    }
+    case 'pulse': {
+      const fs = p.fs || 40;
+      const pw = p.pw || 0.1;
+      out = new Array(N).fill(0);
+      for (let s = 0; s < fs; s++) {
+        const tS = s / fs;
+        const tE = tS + pw / fs;
+        const amp = p.am * Math.sin(PI2 * p.fm * tS);
+        for (let i = 0; i < N; i++) {
+          const t = i / N;
+          if (t >= tS && t < tE) out[i] = amp;
+        }
+      }
+      break;
+    }
+    case 'noise': {
+      let clean;
+      const nmod = p.nmod || 'am';
+      if (nmod === 'am')
+        clean = makeSig(N, t => (p.ac + 0.7*p.ac*Math.sin(PI2*p.fm*t))*Math.cos(PI2*p.fc*t));
+      else if (nmod === 'dsb')
+        clean = makeSig(N, t => p.am*Math.sin(PI2*p.fm*t)*Math.cos(PI2*p.fc*t));
+      else
+        clean = makeSig(N, t => p.ac*Math.cos(PI2*p.fc*t + 2*(1-Math.cos(PI2*p.fm*t))));
+      const sp = Math.sqrt(clean.reduce((a,v)=>a+v*v,0)/N);
+      const nAmp = sp / Math.pow(10, (p.snr||20)/20);
+      out = clean.map(v => v + nAmp * gaussNoise());
+      // draw clean on msg canvas
+      const {ctx:cm, w:wm, h:hm} = resizeCanvas(document.getElementById('c-msg'));
+      clearScope(cm, wm, hm);
+      plotLine(cm, clean, '#4a9eff', wm, hm, 1.5);
+      drawSpectrum(out, p.fc);
+      const {ctx:co, w:wo, h:ho} = resizeCanvas(document.getElementById('c-out'));
+      clearScope(co, wo, ho);
+      plotLine(co, out, '#00e5a0', wo, ho, 1);
+      updateMetrics(p);
+      return;
+    }
+    case 'tc': {
+      const R = p.R || 10, C = p.C || 10;
+      const tau = R * C;
+      const Vs = p.Vs || 5;
+      const tMax = 6 * tau;
+      const mode = p.tcMode || 'charge';
+      out = makeSig(N, t => {
+        const tt = t * tMax;
+        return mode === 'charge' ? Vs*(1-Math.exp(-tt/tau)) : Vs*Math.exp(-tt/tau);
+      });
+      // override scopes for TC
+      const {ctx:cm,w:wm,h:hm} = resizeCanvas(document.getElementById('c-msg'));
+      clearScope(cm,wm,hm);
+      cm.fillStyle='rgba(74,158,255,0.5)';cm.font='11px Space Mono,monospace';
+      cm.fillText('RC Circuit — V_C(t)', 10, 20);
+
+      const {ctx:co,w:wo,h:ho} = resizeCanvas(document.getElementById('c-out'));
+      clearScope(co,wo,ho);
+      // Plot V_C
+      const yC=ho/2, yS=ho*0.42/Math.max(...out.map(Math.abs),0.001);
+      co.strokeStyle='#00e5a0'; co.lineWidth=2; co.beginPath();
+      out.forEach((v,i)=>{const x=i/(N-1)*wo;const y=yC-v*yS;i===0?co.moveTo(x,y):co.lineTo(x,y)});
+      co.stroke();
+      // tau line
+      const thr = mode==='charge'?Vs*0.632:Vs*0.368;
+      const thrY = yC - thr*yS;
+      co.setLineDash([5,4]); co.strokeStyle='#4a9eff'; co.lineWidth=1;
+      co.beginPath(); co.moveTo(0,thrY); co.lineTo(wo,thrY); co.stroke();
+      const tauX = (1/6)*wo;
+      co.setLineDash([3,4]); co.strokeStyle='#f5a623'; co.lineWidth=1;
+      co.beginPath(); co.moveTo(tauX,0); co.lineTo(tauX,ho); co.stroke();
+      co.setLineDash([]); co.fillStyle='#f5a623'; co.font='11px Space Mono,monospace';
+      co.fillText('τ', tauX+3, ho-6);
+      co.fillStyle='rgba(74,158,255,0.7)'; co.font='10px Space Mono,monospace';
+      co.fillText(mode==='charge'?'63.2%':'36.8%', 4, thrY-4);
+      drawSpectrum(out, p.fc);
+      updateMetrics(p);
+      return;
+    }
+  }
+
+  // ─── Render message ───
+  const {ctx:cm,w:wm,h:hm} = resizeCanvas(document.getElementById('c-msg'));
+  clearScope(cm,wm,hm);
+  plotLine(cm, msg, '#4a9eff', wm, hm, 1.5);
+
+  // ─── Render carrier ───
+  if (sc.showCarrier) {
+    const {ctx:cc,w:wc,h:hc} = resizeCanvas(document.getElementById('c-car'));
+    clearScope(cc,wc,hc);
+    plotLine(cc, car, '#64748b', wc, hc, 1);
+  }
+
+  // ─── Render output ───
+  const {ctx:co,w:wo,h:ho} = resizeCanvas(document.getElementById('c-out'));
+  clearScope(co,wo,ho);
+  plotLine(co, out, '#00e5a0', wo, ho, 1.5);
+  if (env) plotLine(co, env, '#f5a623', wo, ho, 1, true);
+  if (env) {
+    const negEnv = env.map(v => -v);
+    plotLine(co, negEnv, '#f5a623', wo, ho, 1, true);
+  }
+
+  drawSpectrum(out, p.fc);
+  updateMetrics(p);
+}
+
+// ─── Metrics update ───────────────────────────────────────────────
+function updateMetrics(p) {
+  const sc = SCHEMES[currentScheme];
+  const metrics = sc.metrics(p);
+  const el = document.getElementById('metrics');
+  if (el) {
+    el.innerHTML = metrics.map(m =>
+      `<div class="metric"><div class="m-label">${m.label}</div><div class="m-val">${m.val}</div></div>`
+    ).join('');
+  }
+}
+
+// ─── Scheme switch ────────────────────────────────────────────────
+function switchScheme(scheme) {
+  currentScheme = scheme;
+  const sc = SCHEMES[scheme];
+
+  document.querySelectorAll('.scheme-btn').forEach(b => b.classList.toggle('active', b.dataset.scheme===scheme));
+  document.getElementById('panel-title').textContent = sc.title;
+  document.getElementById('output-info').textContent = sc.outputInfo;
+  document.getElementById('info-box').innerHTML = sc.info;
+  document.getElementById('formula-bar').innerHTML = sc.formula;
+
+  // Extra controls
+  document.getElementById('extra-controls').innerHTML = sc.extraHTML;
+
+  // Visibility
+  document.getElementById('row-ac').style.display = sc.showAc ? 'block' : 'none';
+  document.getElementById('scope-car-wrap').style.display = sc.showCarrier ? 'block' : 'none';
+
+  // TC hides message / carrier frequency rows
+  const isTc = scheme === 'tc';
+  document.getElementById('row-fm').style.display = isTc ? 'none' : 'block';
+  document.getElementById('row-am').style.display = isTc ? 'none' : 'block';
+  document.getElementById('row-fc').style.display = isTc ? 'none' : 'block';
+  document.getElementById('carr-label').style.display = isTc ? 'none' : 'block';
+
+  // Output legend
+  const leg = document.getElementById('out-legend');
+  let legHTML = `<div class="leg-item"><span class="leg-line" style="background:#00e5a0"></span>${sc.title}</div>`;
+  if (scheme==='am') legHTML += `<div class="leg-item"><span class="leg-line" style="background:#f5a623;border-top:2px dashed #f5a623"></span>Envelope</div>`;
+  leg.innerHTML = legHTML;
+
+  // Attach event listeners to new extra controls
+  attachListeners();
+  draw();
+}
+
+// ─── Listeners ────────────────────────────────────────────────────
+function attachListeners() {
+  const sliders = [
+    ['sl-fm','lbl-fm', v=>v+' Hz'],
+    ['sl-am','lbl-am', v=>(+v).toFixed(1)],
+    ['sl-fc','lbl-fc', v=>v+' Hz'],
+    ['sl-ac','lbl-ac', v=>(+v).toFixed(1)],
+    ['sl-kf','lbl-kf', v=>v+' Hz'],
+    ['sl-kp','lbl-kp', v=>(+v).toFixed(1)+' rad'],
+    ['sl-vf','lbl-vf', v=>(+v).toFixed(2)],
+    ['sl-wdf','lbl-wdf', v=>v+' Hz'],
+    ['sl-ndf','lbl-ndf', v=>(+v).toFixed(1)+' Hz'],
+    ['sl-fs','lbl-fs', v=>v+' Hz'],
+    ['sl-pw','lbl-pw', v=>(+v).toFixed(2)],
+    ['sl-snr','lbl-snr', v=>v+' dB'],
+    ['sl-R','lbl-R', v=>v],
+    ['sl-C','lbl-C', v=>v],
+    ['sl-Vs','lbl-Vs', v=>(+v).toFixed(1)+' V'],
+  ];
+  sliders.forEach(([id, lbl, fmt]) => {
+    const el = document.getElementById(id);
+    const lb = document.getElementById(lbl);
+    if (el) {
+      el.oninput = () => { if(lb) lb.textContent=fmt(el.value); draw(); };
+    }
+  });
+  const selects = ['sl-ssb-side','sl-nmod','sl-tcmode'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.onchange = draw;
+  });
+}
+
+// ─── Scheme buttons ───────────────────────────────────────────────
+document.querySelectorAll('.scheme-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchScheme(btn.dataset.scheme));
+});
+
+// ─── Resize ───────────────────────────────────────────────────────
+window.addEventListener('resize', () => { draw(); });
+
+// ─── Init ─────────────────────────────────────────────────────────
+attachListeners();
+switchScheme('am');
+</script>
+</body>
+</html>
